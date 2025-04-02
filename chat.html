@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeepSeek Chat</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .message-container {
+            height: calc(100vh - 200px);
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 flex items-center">
+                        <i class="fas fa-robot text-blue-500 text-2xl mr-2"></i>
+                        <span class="text-xl font-semibold text-gray-900">DeepSeek Chat</span>
+                    </div>
+                </div>
+                <div class="hidden sm:ml-6 sm:flex sm:items-center space-x-8">
+                    <a href="index.html" class="text-gray-500 hover:text-gray-700 inline-flex items-center px-1 pt-1 text-sm font-medium">Home</a>
+                    <a href="#" class="text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 border-blue-500 text-sm font-medium">Chat</a>
+                    <a href="#" class="text-gray-500 hover:text-gray-700 inline-flex items-center px-1 pt-1 text-sm font-medium">About</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Chat Container -->
+    <div class="max-w-3xl mx-auto px-4 py-6">
+        <!-- Messages Container -->
+        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+            <div class="message-container overflow-y-auto p-4 space-y-4" id="messages">
+                <!-- AI Welcome Message -->
+                <div class="flex items-start">
+                    <div class="flex-shrink-0 h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                        <i class="fas fa-robot text-blue-500"></i>
+                    </div>
+                    <div class="ml-3">
+                        <div class="text-sm font-medium text-gray-900">DeepSeek AI</div>
+                        <div class="mt-1 text-sm text-gray-700">
+                            <p>Hello! I'm DeepSeek AI. How can I help you today?</p>
+                        </div>
+                        <div class="mt-1 text-xs text-gray-500">Just now</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input Area -->
+            <div class="border-t border-gray-200 px-4 py-3 bg-gray-50">
+                <div class="flex space-x-2">
+                    <input type="text" id="message-input" placeholder="Type your message..." 
+                        class="flex-1 min-w-0 block w-full px-3 py-2 rounded-md border border-gray-300 shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    <button id="send-button" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        Send
+                    </button>
+                </div>
+                <p class="mt-2 text-xs text-gray-500">DeepSeek AI may produce inaccurate information about people, places, or facts.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const messageInput = document.getElementById('message-input');
+            const sendButton = document.getElementById('send-button');
+            const messagesContainer = document.getElementById('messages');
+            
+            // Load messages from localStorage
+            const savedMessages = JSON.parse(localStorage.getItem('chatMessages')) || [];
+            savedMessages.forEach(msg => {
+                addMessageToUI(msg.text, msg.sender, msg.timestamp);
+            });
+
+            function addMessageToUI(text, sender, timestamp = new Date()) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `flex items-start ${sender === 'user' ? 'justify-end' : ''}`;
+                
+                const formattedTime = timestamp.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                
+                messageDiv.innerHTML = `
+                    ${sender === 'ai' ? `
+                    <div class="flex-shrink-0 h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                        <i class="fas fa-robot text-blue-500"></i>
+                    </div>
+                    ` : ''}
+                    <div class="${sender === 'ai' ? 'ml-3' : 'mr-3'} max-w-xs lg:max-w-md">
+                        <div class="text-sm font-medium text-gray-900">${sender === 'ai' ? 'DeepSeek AI' : 'You'}</div>
+                        <div class="mt-1 text-sm ${sender === 'ai' ? 'text-gray-700' : 'text-white bg-blue-500 rounded-lg p-3'}">
+                            <p>${text}</p>
+                        </div>
+                        <div class="mt-1 text-xs text-gray-500">${formattedTime}</div>
+                    </div>
+                    ${sender === 'user' ? `
+                    <div class="flex-shrink-0 h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center">
+                        <i class="fas fa-user text-white"></i>
+                    </div>
+                    ` : ''}
+                `;
+                
+                messagesContainer.appendChild(messageDiv);
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+
+            function saveMessage(text, sender) {
+                const messages = JSON.parse(localStorage.getItem('chatMessages')) || [];
+                messages.push({
+                    text,
+                    sender,
+                    timestamp: new Date()
+                });
+                localStorage.setItem('chatMessages', JSON.stringify(messages));
+            }
+
+            let isTyping = false;
+
+            function showTypingIndicator() {
+                if (isTyping) return;
+                isTyping = true;
+                const typingDiv = document.createElement('div');
+                typingDiv.className = 'flex items-start';
+                typingDiv.id = 'typing-indicator';
+                typingDiv.innerHTML = `
+                    <div class="flex-shrink-0 h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                        <i class="fas fa-robot text-blue-500"></i>
+                    </div>
+                    <div class="ml-3 flex items-center">
+                        <div class="typing-indicator"></div>
+                        <div class="typing-indicator"></div>
+                        <div class="typing-indicator"></div>
+                    </div>
+                `;
+                messagesContainer.appendChild(typingDiv);
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+
+            function hideTypingIndicator() {
+                const indicator = document.getElementById('typing-indicator');
+                if (indicator) {
+                    indicator.remove();
+                }
+                isTyping = false;
+            }
+
+            function simulateAIResponse(userMessage) {
+                const responses = {
+                    'hello': 'Hello there! How can I assist you today?',
+                    'hi': 'Hi! What would you like to know?',
+                    'help': 'I can help with general knowledge questions, coding problems, and more. What do you need?',
+                    'default': 'I understand. Is there anything specific you\'d like me to elaborate on?',
+                    'how are you': 'I\'m just a computer program, but I\'m functioning well! How can I help you?',
+                    'thanks': 'You\'re welcome! Is there anything else I can help with?',
+                    'bye': 'Goodbye! Feel free to come back if you have more questions.'
+                };
+
+                const lowerMsg = userMessage.toLowerCase();
+                let response = responses.default;
+
+                Object.keys(responses).forEach(key => {
+                    if (lowerMsg.includes(key)) {
+                        response = responses[key];
+                    }
+                });
+
+                showTypingIndicator();
+                setTimeout(() => {
+                    hideTypingIndicator();
+                    addMessageToUI(response, 'ai');
+                    saveMessage(response, 'ai');
+                }, 1500 + Math.random() * 2000); // Random delay between 1.5-3.5 seconds
+            }
+
+            function handleSendMessage() {
+                const message = messageInput.value.trim();
+                if (message) {
+                    addMessageToUI(message, 'user');
+                    saveMessage(message, 'user');
+                    messageInput.value = '';
+                    messageInput.focus();
+                    setTimeout(() => {
+                        simulateAIResponse(message);
+                    }, 500);
+                }
+            }
+
+            sendButton.addEventListener('click', handleSendMessage);
+            messageInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    handleSendMessage();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
